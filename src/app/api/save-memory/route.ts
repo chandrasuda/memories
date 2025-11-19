@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractMetadata } from '@/lib/metadata';
 import { createMemory } from '@/lib/supabase';
+import { generateEmbedding } from '@/lib/gemini';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,11 +48,20 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // 2. Create memory
+    // 2. Generate Embedding
+    const contentToEmbed = `${metadata.title} ${metadata.description || ''} ${metadata.url}`;
+    const embedding = await generateEmbedding(contentToEmbed);
+
+    // 3. Create memory
+    // Using the same content format as AddMemoryButton (URL + newline + description)
+    // to ensure link preview works correctly.
+    // Explicitly setting type to 'link' to ensure correct rendering.
     const memory = await createMemory({
       title: metadata.title,
       content: `${metadata.url}\n${metadata.description || ''}`,
       assets: metadata.image ? [metadata.image] : [],
+      type: 'link',
+      embedding: embedding.length > 0 ? embedding : undefined,
     });
 
     return NextResponse.json({ success: true, memory }, { headers: corsHeaders });

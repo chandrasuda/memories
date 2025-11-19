@@ -10,6 +10,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 import { MemoryNode } from './MemoryNode';
 import { ImageNode } from './ImageNode';
@@ -17,6 +18,9 @@ import { MultiImageNode } from './MultiImageNode';
 import { LinkNode } from './LinkNode';
 import { ExpandedNodeOverlay } from './ExpandedNodeOverlay';
 import { fetchMemories, Memory, updateMemoryPosition } from '@/lib/supabase';
+import { performSearch } from '@/app/actions';
+import { useSearch } from '@/context/SearchContext';
+import ReactMarkdown from 'react-markdown';
 
 const nodeTypes: NodeTypes = {
   'memory-node': MemoryNode,
@@ -195,21 +199,40 @@ export function InfiniteCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
   const [edges, , onEdgesChange] = useEdgesState([]);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<string | null>(null);
+  const { isSearching, setIsSearching, searchTrigger } = useSearch();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const query = searchParams.get('q');
 
-  // Fetch memories on component mount
+  // Fetch memories on component mount or when query changes
   useEffect(() => {
     async function loadMemories() {
+      setIsSearching(true);
       try {
-        const memories = await fetchMemories();
+        let memories: Memory[];
+        let ragAnswer: string | null = null;
+
+        if (query) {
+          const result = await performSearch(query);
+          memories = result.memories;
+          ragAnswer = result.answer;
+        } else {
+          memories = await fetchMemories();
+        }
+        
         const memoryNodes = createNodesFromMemories(memories);
         setNodes(memoryNodes);
+        setAnswer(ragAnswer);
       } catch (error) {
         console.error('Failed to load memories:', error);
+      } finally {
+        setIsSearching(false);
       }
     }
 
     loadMemories();
-  }, [setNodes]);
+  }, [setNodes, query, setIsSearching, searchTrigger]);
 
   const handleNodeDoubleClick = (event: React.MouseEvent, node: Node) => {
     setExpandedNodeId(node.id);
@@ -224,7 +247,7 @@ export function InfiniteCanvas() {
   const expandedNode = nodes.find(n => n.id === expandedNodeId) || null;
 
   return (
-    <div className="h-full w-full bg-[#F0F0F0]">
+    <div className="h-full w-full bg-[#F0F0F0] relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -241,6 +264,33 @@ export function InfiniteCanvas() {
       >
         <Background color="#F0F0F0" gap={16} />
       </ReactFlow>
+
+      {/* RAG Answer Overlay */}
+      {answer && !isSearching && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4 pointer-events-none">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-[#EFEEEB] p-6 pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0 text-white shadow-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.1 12a10.1 10.1 0 0 0 1.4 2.9l8.5-2.9z"/><path d="M12 12V2.1A10.1 10.1 0 0 0 9.1 3.5l2.9 8.5z"/></svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-p:text-gray-800 prose-headings:text-gray-900 prose-strong:text-gray-900 prose-ul:my-2 prose-li:my-0.5">
+                  <ReactMarkdown>{answer}</ReactMarkdown>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setAnswer(null);
+                  router.push('/');
+                }}
+                className="text-gray-400 hover:text-black transition-colors p-1 hover:bg-gray-100 rounded-full"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ExpandedNodeOverlay 
         node={expandedNode} 

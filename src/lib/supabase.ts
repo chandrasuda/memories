@@ -19,6 +19,7 @@ export interface Memory {
   created_at: string
   x?: number
   y?: number
+  embedding?: number[]
 }
 
 export interface CreateMemoryData {
@@ -28,6 +29,7 @@ export interface CreateMemoryData {
   type?: 'default' | 'link' | 'image'
   x?: number
   y?: number
+  embedding?: number[]
 }
 
 // Helper function to fetch memories
@@ -53,6 +55,20 @@ export async function updateMemoryPosition(id: string, x: number, y: number) {
   if (error) {
     throw error;
   }
+}
+
+export async function searchMemories(queryEmbedding: number[]) {
+  const { data, error } = await supabase.rpc('match_memories', {
+    query_embedding: queryEmbedding,
+    match_threshold: 0.5, // Increased threshold for stricter matching
+    match_count: 3,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data as (Memory & { similarity: number })[];
 }
 
 export async function createMemory(memory: CreateMemoryData) {

@@ -49,7 +49,8 @@ export async function extractMetadata(url: string): Promise<LinkMetadata | null>
 
     async function fetchHtml(primaryUrl: string): Promise<string | null> {
       try {
-        const res = await fetchWithTimeout(primaryUrl, { timeoutMs: 12000 });
+        // Reduced timeout to 6s to fail faster and improve UX
+        const res = await fetchWithTimeout(primaryUrl, { timeoutMs: 6000 });
         if (!res.ok) throw new Error(`Primary fetch failed: ${res.status}`);
         const contentType = res.headers.get('content-type');
         if (contentType && !contentType.includes('text/html')) {
@@ -58,12 +59,13 @@ export async function extractMetadata(url: string): Promise<LinkMetadata | null>
         }
         return await res.text();
       } catch (e) {
-        console.error("Primary fetch failed", e);
+        // Log as warning instead of error for the first attempt
+        console.warn(`Primary metadata fetch failed for ${primaryUrl} (will retry with bot UA):`, e instanceof Error ? e.message : e);
         
         // Try one more time with a generic bot user agent
         try {
           const res = await fetchWithTimeout(primaryUrl, { 
-            timeoutMs: 12000,
+            timeoutMs: 6000,
             headers: {
               'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -72,7 +74,7 @@ export async function extractMetadata(url: string): Promise<LinkMetadata | null>
           if (!res.ok) throw new Error(`Bot fetch failed: ${res.status}`);
           return await res.text();
         } catch (e2) {
-          console.error("Bot fetch failed", e2);
+          console.warn(`Bot metadata fetch failed for ${primaryUrl}:`, e2 instanceof Error ? e2.message : e2);
           return null;
         }
       }
