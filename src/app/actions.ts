@@ -1,7 +1,7 @@
 'use server';
 import 'server-only';
 import { extractMetadata as extractMetadataLogic, LinkMetadata } from '@/lib/metadata';
-import { generateEmbedding, generateAnswer } from '@/lib/gemini';
+import { generateEmbedding, generateAnswer, generateAnswerWithFiltering } from '@/lib/gemini';
 import { searchMemories, createMemory, CreateMemoryData } from '@/lib/supabase';
 
 export { type LinkMetadata };
@@ -39,16 +39,31 @@ export async function performSearch(query: string) {
     if (embedding.length === 0) {
       return { memories: [], answer: null };
     }
-    const memories = await searchMemories(embedding);
+    
+    // Fetch candidate memories with optimal threshold
+    const allMemories = await searchMemories(embedding, 0.4, 15);
 
-    // Generate RAG answer
+    // Generate RAG answer - LLM will decide which memories are actually relevant
     let answer = null;
-    if (memories.length > 0) {
-      const context = memories.map(m => `Title: ${m.title}\nContent: ${m.content}`).join("\n\n");
-      answer = await generateAnswer(query, context);
+    let relevantMemoryIds: string[] = [];
+    
+    if (allMemories.length > 0) {
+      // Include similarity scores to help the LLM understand relevance
+      const context = allMemories
+        .map((m, idx) => `[Memory ${idx + 1}] ID: ${m.id} | Relevance: ${(m.similarity * 100).toFixed(0)}%\nTitle: ${m.title}\nContent: ${m.content}`)
+        .join("\n\n---\n\n");
+      
+      const result = await generateAnswerWithFiltering(query, context, allMemories.length);
+      answer = result.answer;
+      relevantMemoryIds = result.relevantMemoryIds;
     } else {
-      answer = "I couldn't find any memories related to that.";
+      answer = "I couldn't find any memories related to that. Try describing what you're looking for in different words.";
     }
+
+    // Filter memories to only show what LLM deemed relevant
+    const memories = relevantMemoryIds.length > 0 
+      ? allMemories.filter(m => relevantMemoryIds.includes(m.id))
+      : allMemories.slice(0, 5); // Fallback: show top 5 if LLM doesn't specify
 
     return { memories, answer };
   } catch (error) {

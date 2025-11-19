@@ -57,11 +57,11 @@ export async function updateMemoryPosition(id: string, x: number, y: number) {
   }
 }
 
-export async function searchMemories(queryEmbedding: number[]) {
+export async function searchMemories(queryEmbedding: number[], threshold: number = 0.5, limit: number = 10) {
   const { data, error } = await supabase.rpc('match_memories', {
     query_embedding: queryEmbedding,
-    match_threshold: 0.7, // Increased threshold for stricter matching
-    match_count: 3,
+    match_threshold: threshold,
+    match_count: limit,
   });
 
   if (error) {
