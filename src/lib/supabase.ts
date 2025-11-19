@@ -17,6 +17,8 @@ export interface Memory {
   assets?: string[] // URLs to images/files/videos
   type?: 'default' | 'link' | 'image' // New field to distinguish memory types
   created_at: string
+  x?: number
+  y?: number
 }
 
 export interface CreateMemoryData {
@@ -24,6 +26,8 @@ export interface CreateMemoryData {
   content: string
   assets?: string[]
   type?: 'default' | 'link' | 'image'
+  x?: number
+  y?: number
 }
 
 // Helper function to fetch memories
@@ -38,6 +42,17 @@ export async function fetchMemories() {
   }
 
   return data as Memory[];
+}
+
+export async function updateMemoryPosition(id: string, x: number, y: number) {
+  const { error } = await supabase
+    .from('memories')
+    .update({ x, y })
+    .eq('id', id);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function createMemory(memory: CreateMemoryData) {

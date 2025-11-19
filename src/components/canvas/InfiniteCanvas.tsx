@@ -9,14 +9,14 @@ import {
   Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { MemoryNode } from './MemoryNode';
 import { ImageNode } from './ImageNode';
 import { MultiImageNode } from './MultiImageNode';
 import { LinkNode } from './LinkNode';
 import { ExpandedNodeOverlay } from './ExpandedNodeOverlay';
-import { fetchMemories, Memory } from '@/lib/supabase';
+import { fetchMemories, Memory, updateMemoryPosition } from '@/lib/supabase';
 
 const nodeTypes: NodeTypes = {
   'memory-node': MemoryNode,
@@ -48,8 +48,9 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
   const centerX = 0;
   const centerY = 0;
 
-  memories.forEach((memory) => {
-    // Determine node type and dimensions
+  // 1. Pre-process memories to determine dimensions and types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const processed = memories.map((memory) => {
     let type = 'memory-node';
     let width = 300; // Default width
     let height = 300; // Default height estimate
@@ -85,65 +86,6 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
       height = 200;
     }
 
-    // Find position using spiral algorithm
-    let x = centerX;
-    let y = centerY;
-    let angle = 0;
-    // Start with a small radius to place the first item near center
-    // But we need to check collision.
-    // For the very first item, place at center.
-    
-    if (placedRects.length > 0) {
-      // Spiral parameters
-      const a = 0;
-      const b = 25; // Reduced for tighter packing
-      
-      // Iterate along spiral until we find a spot
-      let found = false;
-      angle = 0.1; 
-      
-      while (!found) {
-        // Standard spiral radius
-        const r = a + b * angle;
-        
-        // Project polar coordinates to a square spiral
-        // This scales the circular spiral outward to fill a square shape
-        // max(|cos|, |sin|) creates the square boundary
-        const scale = 1 / Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle)));
-        
-        x = centerX + (r * Math.cos(angle)) * scale;
-        y = centerY + (r * Math.sin(angle)) * scale;
-
-        // Check collision with all previously placed nodes
-        let collision = false;
-        for (const rect of placedRects) {
-          if (isColliding({ x, y, w: width, h: height }, rect, 20)) { // 20px padding
-            collision = true;
-            break;
-          }
-        }
-
-        if (!collision) {
-          found = true;
-        } else {
-          // Increment angle
-          // Use dynamic step size based on radius to keep search resolution roughly constant
-          // As we get further out, we need smaller angle steps to step the same pixel distance
-          const step = Math.min(0.1, 10 / (r + 10)); 
-          angle += step;
-        }
-        
-        // Safety break
-        if (angle > 2000) break; 
-      }
-    } else {
-      // First node at center
-      x = centerX - width / 2;
-      y = centerY - height / 2;
-    }
-
-    placedRects.push({ x, y, w: width, h: height });
-
     // Prepare data
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: Record<string, any> = {
@@ -170,11 +112,79 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
       data.images = memory.assets || [];
     }
 
+    return {
+      ...memory,
+      _type: type,
+      _width: width,
+      _height: height,
+      _data: data
+    };
+  });
+
+  // 2. Populate placedRects with existing fixed positions
+  processed.forEach(m => {
+    if (typeof m.x === 'number' && typeof m.y === 'number') {
+      placedRects.push({ x: m.x, y: m.y, w: m._width, h: m._height });
+    }
+  });
+
+  // 3. Place nodes
+  processed.forEach((m) => {
+    let x = m.x;
+    let y = m.y;
+    
+    // If no position, find one using spiral
+    if (x === undefined || y === undefined) {
+        x = centerX;
+        y = centerY;
+        let angle = 0;
+        
+        if (placedRects.length > 0) {
+            // Spiral parameters
+            const a = 0;
+            const b = 25; 
+            
+            let found = false;
+            angle = 0.1; 
+            
+            while (!found) {
+                const r = a + b * angle;
+                const scale = 1 / Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle)));
+                
+                x = centerX + (r * Math.cos(angle)) * scale;
+                y = centerY + (r * Math.sin(angle)) * scale;
+
+                let collision = false;
+                for (const rect of placedRects) {
+                    if (isColliding({ x, y, w: m._width, h: m._height }, rect, 20)) {
+                        collision = true;
+                        break;
+                    }
+                }
+
+                if (!collision) {
+                    found = true;
+                } else {
+                    const step = Math.min(0.1, 10 / (r + 10)); 
+                    angle += step;
+                }
+                
+                if (angle > 2000) break; 
+            }
+        } else {
+             x = centerX - m._width / 2;
+             y = centerY - m._height / 2;
+        }
+        
+        // Add the newly found position to placedRects so future nodes respect it
+        placedRects.push({ x, y, w: m._width, h: m._height });
+    }
+
     nodes.push({
-      id: memory.id,
-      type,
+      id: m.id,
+      type: m._type,
       position: { x, y },
-      data,
+      data: m._data,
     });
   });
 
@@ -204,6 +214,12 @@ export function InfiniteCanvas() {
   const handleNodeDoubleClick = (event: React.MouseEvent, node: Node) => {
     setExpandedNodeId(node.id);
   };
+  
+  const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
+    updateMemoryPosition(node.id, node.position.x, node.position.y).catch(err => {
+        console.error("Failed to save node position:", err);
+    });
+  }, []);
 
   const expandedNode = nodes.find(n => n.id === expandedNodeId) || null;
 
@@ -221,6 +237,7 @@ export function InfiniteCanvas() {
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
         onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeDragStop={onNodeDragStop}
       >
         <Background color="#F0F0F0" gap={16} />
       </ReactFlow>
