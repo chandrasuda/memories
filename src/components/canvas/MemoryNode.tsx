@@ -1,15 +1,21 @@
 import { NodeProps, Node } from '@xyflow/react';
 import { cn } from '@/lib/utils';
+import { ImageStack } from '@/components/ui/ImageStack';
+import { ImageComponent } from '@/components/ui/images';
 
 export type MemoryNodeData = {
   label?: string;
   content?: string;
   type?: 'text' | 'image' | 'video' | 'mixed';
+  images?: string[];
 };
 
 export type MemoryNode = Node<MemoryNodeData, 'memory-node'>;
 
-export function MemoryNode({ data, selected }: NodeProps<MemoryNode>) {
+export function MemoryNode({ data }: NodeProps<MemoryNode>) {
+  const hasImages = data.images && data.images.length > 0;
+  const isMultiImage = data.images && data.images.length > 1;
+
   return (
     <div
       className={cn(
@@ -25,14 +31,34 @@ export function MemoryNode({ data, selected }: NodeProps<MemoryNode>) {
           </div>
         )}
         
-        {/* Content */}
-        <div className="relative flex-1 min-h-0">
-          <div className="text-black font-semibold text-[11px] leading-relaxed whitespace-pre-wrap h-full overflow-hidden">
-            {data.content || "Empty memory..."}
+        <div className="flex flex-1 gap-5 min-h-0">
+          {/* Image Section (Left) */}
+          {hasImages && (
+            <div className="w-[100px] shrink-0 flex items-center justify-center">
+              {isMultiImage ? (
+                <div className="scale-75 origin-center">
+                   <ImageStack images={data.images!} width={120} height={120} />
+                </div>
+              ) : (
+                <ImageComponent 
+                  src={data.images![0]} 
+                  width={100} 
+                  height={100} 
+                  className="shadow-md"
+                />
+              )}
+            </div>
+          )}
+
+          {/* Content Section (Right or Full) */}
+          <div className="relative flex-1 min-h-0">
+            <div className="text-black font-semibold text-[11px] leading-relaxed whitespace-pre-wrap h-full overflow-hidden">
+              {data.content || "Empty memory..."}
+            </div>
+            
+            {/* Gradient Fade */}
+            <div className="absolute bottom-0 left-0 w-full h-5 bg-linear-to-t from-white to-transparent pointer-events-none" />
           </div>
-          
-          {/* Gradient Fade */}
-          <div className="absolute bottom-0 left-0 w-full h-5 bg-linear-to-t from-white to-transparent pointer-events-none" />
         </div>
       </div>
     </div>

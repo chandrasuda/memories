@@ -7,12 +7,15 @@ import {
   useEdgesState,
   NodeTypes,
   Background,
+  Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { useState } from 'react';
 
 import { MemoryNode } from './MemoryNode';
 import { ImageNode } from './ImageNode';
 import { MultiImageNode } from './MultiImageNode';
+import { ExpandedNodeOverlay } from './ExpandedNodeOverlay';
 
 const nodeTypes: NodeTypes = {
   'memory-node': MemoryNode,
@@ -25,7 +28,7 @@ const initialNodes = [
     id: '1',
     type: 'memory-node',
     position: { x: 250, y: 250 },
-    data: { label: 'Welcome', content: 'Welcome to your new memory space. Hi Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. ' },
+    data: { label: 'Welcome', content: 'Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. ' },
   },
   {
     id: '2',
@@ -51,11 +54,32 @@ const initialNodes = [
       ]
     },
   },
+  {
+    id: '5',
+    type: 'memory-node',
+    position: { x: 100, y: 600 },
+    data: {
+      label: 'Yosemite Trip with the boys',
+      content: 'The hike was so good. We walked along the river, smelling the flowers and watching birds. Was so fun being with everyone and climbing the rocks. Can\'t wait for the next adventure!',
+      images: [
+        '/bill-gates-young.jpg',
+        '/steve jobs.png',
+        '/bill-gates-young.jpg'
+      ]
+    },
+  },
 ];
 
 export function InfiniteCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+
+  const handleNodeDoubleClick = (event: React.MouseEvent, node: Node) => {
+    setExpandedNodeId(node.id);
+  };
+
+  const expandedNode = nodes.find(n => n.id === expandedNodeId) || null;
 
   return (
     <div className="h-full w-full bg-[#F0F0F0]">
@@ -69,10 +93,16 @@ export function InfiniteCanvas() {
         minZoom={0.1}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
+        onNodeDoubleClick={handleNodeDoubleClick}
       >
         <Background color="#F0F0F0" gap={16} />
         <Controls className="bg-white border border-gray-200 shadow-sm" />
       </ReactFlow>
+
+      <ExpandedNodeOverlay 
+        node={expandedNode} 
+        onClose={() => setExpandedNodeId(null)} 
+      />
     </div>
   );
 }
