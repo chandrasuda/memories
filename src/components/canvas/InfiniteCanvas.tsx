@@ -43,86 +43,6 @@ function isColliding(
   );
 }
 
-// Recursive function to resolve overlaps
-// Returns true if any node was moved
-function resolveOverlaps(nodes: Node[], padding: number = 50): boolean {
-    let moved = false;
-    // Simple iterative solver. Repeat a few times to propagate changes.
-    // A force-directed approach would be better for large graphs but complex to implement quickly without a library.
-    // Here we'll use a simple "push away" logic.
-    
-    const iterations = 5; // Limit iterations to prevent infinite loops
-    
-    for (let iter = 0; iter < iterations; iter++) {
-        let iterMoved = false;
-        
-        for (let i = 0; i < nodes.length; i++) {
-            for (let j = i + 1; j < nodes.length; j++) {
-                const n1 = nodes[i];
-                const n2 = nodes[j];
-                
-                // Approximate dimensions if not strictly known yet, but we usually set them in data or assume standard
-                // We stored _width and _height in our custom properties when creating nodes, but React Flow nodes don't carry them by default at root level unless we put them there.
-                // Let's assume our custom node creation logic added width/height to the node object itself or data.
-                // In this file, we did not explicitly add width/height to the Node object root (except in previous step we saw `width` variable but not assigned to `node.width`).
-                // React Flow `node.measured` is available only after render.
-                // But we can use our estimated dimensions from `processMemory` if we persist them.
-                // Let's assume standard 300x300 if missing for now, or read from data if we attached it.
-                
-                const w1 = (n1.data?.width as number) || (n1.type === 'memory-node' ? 290 : 300);
-                const h1 = (n1.data?.height as number) || (n1.type === 'memory-node' ? 200 : 280);
-                
-                const w2 = (n2.data?.width as number) || (n2.type === 'memory-node' ? 290 : 300);
-                const h2 = (n2.data?.height as number) || (n2.type === 'memory-node' ? 200 : 280);
-                
-                if (isColliding(
-                    { x: n1.position.x, y: n1.position.y, w: w1, h: h1 },
-                    { x: n2.position.x, y: n2.position.y, w: w2, h: h2 },
-                    padding
-                )) {
-                    // Collision detected. Move n2 away from n1.
-                    // Direction vector
-                    let dx = (n2.position.x + w2/2) - (n1.position.x + w1/2);
-                    let dy = (n2.position.y + h2/2) - (n1.position.y + h1/2);
-                    
-                    if (dx === 0 && dy === 0) {
-                        dx = 1; // Prevent div by zero
-                    }
-                    
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    // Normalize and push
-                    // How much to push?
-                    // We need to separate them by at least (radius1 + radius2)? Or just box overlap?
-                    // Simple box push: find overlap amounts
-                    
-                    // Simpler approach: Push n2 in direction of (dx, dy) by a fixed step or overlap amount.
-                    // Let's just push by a small step and let next iteration resolve more.
-                    // Or push completely out.
-                    
-                    const overlapX = (w1 + w2)/2 + padding - Math.abs(dx);
-                    const overlapY = (h1 + h2)/2 + padding - Math.abs(dy);
-                    
-                    if (overlapX > 0 && overlapY > 0) {
-                         // Push in the axis of least overlap to minimize movement
-                         if (overlapX < overlapY) {
-                             const signX = dx > 0 ? 1 : -1;
-                             n2.position.x += overlapX * signX;
-                         } else {
-                             const signY = dy > 0 ? 1 : -1;
-                             n2.position.y += overlapY * signY;
-                         }
-                         iterMoved = true;
-                         moved = true;
-                    }
-                }
-            }
-        }
-        if (!iterMoved) break;
-    }
-    return moved;
-}
-
-
 // Preprocess memory to determine type and dimensions
 function processMemory(memory: Memory) {
   let type = 'memory-node';
@@ -166,9 +86,6 @@ function processMemory(memory: Memory) {
       label: memory.title,
       content: memory.content,
       images: memory.assets || [],
-      // Store dimensions in data for collision detection later
-      width,
-      height
   };
 
   if (type === 'link-node') {
@@ -276,13 +193,6 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
       data: m._data,
     });
   });
-  
-  // 4. Final overlap check and resolution
-  // Even with spiral placement, we might have overlaps if existing saved positions are close to each other
-  // or if spiral placement wasn't perfect (though it checks placedRects).
-  // The user specifically asked to resolve overlaps for "non-user created arrangement" or just generally.
-  // "prevet overlap on node in stationary position" -> run resolution.
-  resolveOverlaps(nodes, 20);
 
   return nodes;
 }
@@ -291,20 +201,13 @@ function createSortedNodes(memories: Memory[]): Node[] {
     const processed = memories.map(processMemory);
     const nodes: Node[] = [];
     
-    const COLUMNS = 4; // Changed to 4 columns as requested
+    const COLUMNS = 4;
     const GAP_X = 40;
     const GAP_Y = 40;
-    
-    // To center 4 columns:
-    // We need to calculate total width.
-    // Assuming avg width 300 + gap.
-    // Let's calculate positions dynamically relative to center.
     
     const columnHeights = new Array(COLUMNS).fill(0).map(() => -300); // Start Y
     
     // Total width = (COLUMNS * 300) + ((COLUMNS - 1) * GAP_X)
-    // But widths vary slightly (290 vs 300). Let's assume 300 for grid alignment.
-    const GRID_COL_WIDTH = 340; // 300 + 40 gap roughly
     const totalWidth = (COLUMNS * 300) + ((COLUMNS - 1) * GAP_X);
     const startX = -(totalWidth / 2) + (300 / 2); // Start from left-most column center
 
@@ -394,51 +297,11 @@ export function InfiniteCanvas({ isSorted = false }: InfiniteCanvasProps) {
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
     // Only save if NOT sorted
     if (!isSorted) {
-        // We should check for overlaps after drag stop and resolve them?
-        // The user said "prevent overlap on node in stationary position".
-        // If user drops node A on node B, B should move.
-        
-        setNodes((nds) => {
-             // Create a copy to mutate
-             const newNodes = nds.map(n => ({...n}));
-             const moved = resolveOverlaps(newNodes, 20);
-             
-             if (moved) {
-                 // If we moved nodes, we should save their new positions to DB
-                 newNodes.forEach(n => {
-                     // Optimization: only save modified ones? 
-                     // For simplicity, we can just save the dragged one and any that were pushed.
-                     // But tracking which moved is complex inside helper.
-                     // Let's just save the one the user dragged explicitly first (handled below)
-                     // And then maybe save all? Saving all is expensive.
-                     // Let's rely on the fact that if they overlap, the next load will resolve them anyway, 
-                     // OR better: save the specific node that was dragged.
-                     // The pushed nodes will "snap back" on reload unless saved.
-                     // To truly persist the "pushed away" state, we must save those pushed nodes.
-                     
-                     // Check if position changed from original 'nds'
-                     const original = nds.find(o => o.id === n.id);
-                     if (original && (original.position.x !== n.position.x || original.position.y !== n.position.y)) {
-                         updateMemoryPosition(n.id, n.position.x, n.position.y).catch(console.error);
-                     }
-                 });
-             }
-             
-             // Also ensure the dragged node position is saved (already covered by logic above if it moved, but if it didn't move by overlap but just by user drag, we still save)
-             // Actually the above logic covers "moved by overlap resolution".
-             // But if no overlap, we still need to save the user's drag result.
-             // So we should always save the target node 'node' at its new position in 'newNodes'.
-             
-             // Re-find the dragged node in the new set
-             const updatedDraggedNode = newNodes.find(n => n.id === node.id);
-             if (updatedDraggedNode) {
-                 updateMemoryPosition(updatedDraggedNode.id, updatedDraggedNode.position.x, updatedDraggedNode.position.y).catch(console.error);
-             }
-
-             return newNodes;
+        updateMemoryPosition(node.id, node.position.x, node.position.y).catch(err => {
+            console.error("Failed to save node position:", err);
         });
     }
-  }, [isSorted, setNodes]);
+  }, [isSorted]);
 
   const expandedNode = nodes.find(n => n.id === expandedNodeId) || null;
 
