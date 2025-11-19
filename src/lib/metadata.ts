@@ -5,6 +5,7 @@ export interface LinkMetadata {
   description: string;
   image: string | null;
   url: string;
+  content?: string;
 }
 
 export async function extractMetadata(url: string): Promise<LinkMetadata | null> {
@@ -133,7 +134,25 @@ export async function extractMetadata(url: string): Promise<LinkMetadata | null>
     const cleanedTitle = rawTitle.trim() || new URL(targetUrl).hostname;
     const cleanedDescription = rawDescription.trim();
 
-    return { title: cleanedTitle, description: cleanedDescription, image: resolvedImage, url: targetUrl };
+    // Extract main content text
+    // Remove scripts, styles, and other non-content elements
+    $('script, style, noscript, iframe, svg, header, footer, nav').remove();
+    
+    // Get text from body, collapsing whitespace
+    let mainContent = $('body').text().replace(/\s+/g, ' ').trim();
+    
+    // Truncate if too long (e.g. 10000 chars) to avoid huge payloads
+    if (mainContent.length > 10000) {
+        mainContent = mainContent.substring(0, 10000);
+    }
+
+    return { 
+        title: cleanedTitle, 
+        description: cleanedDescription, 
+        image: resolvedImage, 
+        url: targetUrl,
+        content: mainContent
+    };
   } catch (error) {
     console.error('Error extracting metadata:', error);
     try {

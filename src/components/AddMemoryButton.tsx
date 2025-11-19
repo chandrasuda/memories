@@ -18,8 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { extractMetadata } from '@/app/actions';
-import { createMemory } from '@/lib/supabase';
+import { extractMetadata, createMemoryWithEmbedding } from '@/app/actions';
 import { Link as LinkIcon, PenTool, Loader2, Image as ImageIcon } from 'lucide-react';
 
 export function AddMemoryButton() {
@@ -77,7 +76,7 @@ export function AddMemoryButton() {
       if (uploadedUrls.length > 0) {
         // Note: We are NOT sending 'type' field to avoid errors if the column doesn't exist in DB yet.
         // The InfiniteCanvas will infer it's an image node based on assets presence and empty content.
-        await createMemory({
+        await createMemoryWithEmbedding({
           title: 'Image Memory', // Placeholder title
           content: '', // Empty content for image-only memories
           assets: uploadedUrls,
@@ -132,9 +131,14 @@ export function AddMemoryButton() {
       // Note: We are NOT sending 'type' field to avoid errors if the column doesn't exist in DB yet.
       // The InfiniteCanvas will infer it's a link node based on content being a URL.
       // We store URL and description in content separated by a newline to preserve both.
-      await createMemory({
+      // We also append the scraped content for RAG purposes.
+      const scrapedContent = metadata.content || '';
+      // Limit scraped content to avoid hitting token limits too easily, though embedding models handle large context usually.
+      // But for display in LinkNode, we rely on line-clamp.
+      
+      await createMemoryWithEmbedding({
         title: metadata.title,
-        content: `${metadata.url}\n${metadata.description || ''}`, 
+        content: `${metadata.url}\n${metadata.description || ''}\n\n${scrapedContent}`, 
         assets: metadata.image ? [metadata.image] : [],
       });
 

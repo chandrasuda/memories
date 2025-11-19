@@ -8,7 +8,7 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey || "");
 const embeddingModel = genAI.getGenerativeModel({ model: "models/embedding-001" });
-const textModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const textModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
 export async function generateEmbedding(text: string): Promise<number[]> {
   if (!apiKey) return [];
@@ -30,10 +30,11 @@ export async function generateAnswer(query: string, context: string): Promise<st
 
   try {
     const prompt = `
-You are a helpful assistant for a personal memory system. 
-Answer the user's query based ONLY on the provided context.
-If the answer is not in the context, say "I don't have a memory of that."
-Keep the answer concise and friendly.
+You are a helpful assistant for a personal memory system.
+Answer the User Query based on the provided Context.
+Keep your response extremely concise, limited to 3-4 sentences maximum. You can use bullet points.
+Start by briefly mentioning what relevant memories were found, then answer the question directly.
+If the answer is not in the context, simply say so.
 
 Context:
 ${context}

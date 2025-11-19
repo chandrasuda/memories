@@ -35,7 +35,8 @@ export async function POST(req: NextRequest) {
         title: new URL(normalizedUrl).hostname,
         description: '',
         image: null,
-        url: normalizedUrl
+        url: normalizedUrl,
+        content: ''
       };
     }
 
@@ -44,21 +45,23 @@ export async function POST(req: NextRequest) {
         title: new URL(normalizedUrl).hostname,
         description: '',
         image: null,
-        url: normalizedUrl
+        url: normalizedUrl,
+        content: ''
       };
     }
 
     // 2. Generate Embedding
-    const contentToEmbed = `${metadata.title} ${metadata.description || ''} ${metadata.url}`;
+    const scrapedContent = metadata.content || '';
+    const contentToEmbed = `${metadata.title} ${metadata.description || ''} ${metadata.url} ${scrapedContent}`;
     const embedding = await generateEmbedding(contentToEmbed);
 
     // 3. Create memory
-    // Using the same content format as AddMemoryButton (URL + newline + description)
-    // to ensure link preview works correctly.
+    // Using the same content format as AddMemoryButton (URL + newline + description + scraped content)
+    // to ensure link preview works correctly and RAG has access to full text.
     // Explicitly setting type to 'link' to ensure correct rendering.
     const memory = await createMemory({
       title: metadata.title,
-      content: `${metadata.url}\n${metadata.description || ''}`,
+      content: `${metadata.url}\n${metadata.description || ''}\n\n${scrapedContent}`,
       assets: metadata.image ? [metadata.image] : [],
       type: 'link',
       embedding: embedding.length > 0 ? embedding : undefined,

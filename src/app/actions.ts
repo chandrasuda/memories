@@ -2,12 +2,31 @@
 import 'server-only';
 import { extractMetadata as extractMetadataLogic, LinkMetadata } from '@/lib/metadata';
 import { generateEmbedding, generateAnswer } from '@/lib/gemini';
-import { searchMemories } from '@/lib/supabase';
+import { searchMemories, createMemory, CreateMemoryData } from '@/lib/supabase';
 
 export { type LinkMetadata };
 
 export async function extractMetadata(url: string): Promise<LinkMetadata | null> {
   return extractMetadataLogic(url);
+}
+
+export async function createMemoryWithEmbedding(memoryData: CreateMemoryData) {
+  try {
+    // Generate embedding for the memory content
+    // We combine title and content for a richer embedding context
+    const contentToEmbed = `${memoryData.title} ${memoryData.content}`;
+    const embedding = await generateEmbedding(contentToEmbed);
+    
+    const memoryWithEmbedding = {
+      ...memoryData,
+      embedding: embedding.length > 0 ? embedding : undefined,
+    };
+
+    return await createMemory(memoryWithEmbedding);
+  } catch (error) {
+    console.error("Failed to create memory with embedding:", error);
+    throw error;
+  }
 }
 
 export async function performSearch(query: string) {
