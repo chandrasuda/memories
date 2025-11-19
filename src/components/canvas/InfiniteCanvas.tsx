@@ -1,21 +1,21 @@
 'use client';
 
-import { 
-  ReactFlow, 
-  Controls, 
-  useNodesState, 
+import {
+  ReactFlow,
+  useNodesState,
   useEdgesState,
   NodeTypes,
   Background,
   Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { MemoryNode } from './MemoryNode';
 import { ImageNode } from './ImageNode';
 import { MultiImageNode } from './MultiImageNode';
 import { ExpandedNodeOverlay } from './ExpandedNodeOverlay';
+import { fetchMemories, Memory } from '@/lib/supabase';
 
 const nodeTypes: NodeTypes = {
   'memory-node': MemoryNode,
@@ -23,57 +23,51 @@ const nodeTypes: NodeTypes = {
   'multi-image-node': MultiImageNode,
 };
 
-const initialNodes = [
-  {
-    id: '1',
-    type: 'memory-node',
-    position: { x: 250, y: 250 },
-    data: { label: 'Welcome', content: 'Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. ' },
-  },
-  {
-    id: '2',
-    type: 'memory-node',
-    position: { x: 600, y: 100 },
-    data: { label: 'Getting Started', content: 'Double click anywhere to create a new node (coming soon).' },
-  },
-  {
-    id: '3',
-    type: 'image-node',
-    position: { x: 400, y: 400 },
-    data: { src: '/bill-gates-young.jpg', alt: 'Bill Gates Memory' },
-  },
-  {
-    id: '4',
-    type: 'multi-image-node',
-    position: { x: 700, y: 300 },
-    data: {
-      images: [
-        '/bill-gates-young.jpg',
-        '/steve jobs.png',
-        '/bill-gates-young.jpg'
-      ]
-    },
-  },
-  {
-    id: '5',
-    type: 'memory-node',
-    position: { x: 100, y: 600 },
-    data: {
-      label: 'Yosemite Trip with the boys',
-      content: 'The hike was so good. We walked along the river, smelling the flowers and watching birds. Was so fun being with everyone and climbing the rocks. Can\'t wait for the next adventure!',
-      images: [
-        '/bill-gates-young.jpg',
-        '/steve jobs.png',
-        '/bill-gates-young.jpg'
-      ]
-    },
-  },
-];
+// Function to create nodes from memories
+function createNodesFromMemories(memories: Memory[]): Node[] {
+  return memories.map((memory, index) => {
+    // Create a simple grid layout
+    const cols = Math.ceil(Math.sqrt(memories.length));
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+
+    const x = 300 + (col * 350);
+    const y = 200 + (row * 250);
+
+    return {
+      id: memory.id,
+      type: 'memory-node',
+      position: { x, y },
+      data: {
+        label: memory.title,
+        content: memory.content,
+        images: memory.assets || [],
+        // Extract images from content if assets array is empty (fallback for old memories)
+        // This handles the case where images might be embedded in HTML content
+      },
+    };
+  });
+}
 
 export function InfiniteCanvas() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+
+  // Fetch memories on component mount
+  useEffect(() => {
+    async function loadMemories() {
+      try {
+        const memories = await fetchMemories();
+        const memoryNodes = createNodesFromMemories(memories);
+        setNodes(memoryNodes);
+      } catch (error) {
+        console.error('Failed to load memories:', error);
+      }
+    }
+
+    loadMemories();
+  }, [setNodes]);
 
   const handleNodeDoubleClick = (event: React.MouseEvent, node: Node) => {
     setExpandedNodeId(node.id);
@@ -96,7 +90,6 @@ export function InfiniteCanvas() {
         onNodeDoubleClick={handleNodeDoubleClick}
       >
         <Background color="#F0F0F0" gap={16} />
-        <Controls className="bg-white border border-gray-200 shadow-sm" />
       </ReactFlow>
 
       <ExpandedNodeOverlay 

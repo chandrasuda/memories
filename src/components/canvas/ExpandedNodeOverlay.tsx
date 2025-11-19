@@ -67,9 +67,13 @@ export function ExpandedNodeOverlay({ node, onClose }: ExpandedNodeOverlayProps)
             )}
 
             {/* Content Section */}
-            <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {data.content}
-            </div>
+            <div 
+              className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap prose prose-lg max-w-none"
+              dangerouslySetInnerHTML={{ 
+                __html: (data.content || "")
+                  .replace(/<img[^>]*>/g, '') // Remove images from expanded view as they are shown separately
+              }}
+            />
           </div>
         );
       }

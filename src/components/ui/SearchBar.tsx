@@ -1,4 +1,6 @@
 
+import { Button } from "@/components/ui/button";
+
 export function SearchBar() {
   return (
     <div className="fixed bottom-[30px] left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4">
@@ -12,7 +14,10 @@ export function SearchBar() {
         />
 
         {/* Upload Button */}
-        <button className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity cursor-pointer mr-[-12px]" style={{backgroundColor: '#000', boxShadow: '0 0 8px 0 #FFF inset'}}></button>
+        <Button
+          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity cursor-pointer mr-[-12px] p-0 border-0"
+          style={{backgroundColor: '#000', boxShadow: '0 0 8px 0 #FFF inset'}}
+        />
       </div>
     </div>
   );

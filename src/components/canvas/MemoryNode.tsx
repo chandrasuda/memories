@@ -52,12 +52,17 @@ export function MemoryNode({ data }: NodeProps<MemoryNode>) {
 
           {/* Content Section (Right or Full) */}
           <div className="relative flex-1 min-h-0">
-            <div className="text-black font-semibold text-[11px] leading-relaxed whitespace-pre-wrap h-full overflow-hidden">
-              {data.content || "Empty memory..."}
-            </div>
+            <div 
+              className="text-black font-semibold text-[11px] leading-relaxed whitespace-pre-wrap h-full overflow-hidden wrap-break-word"
+              dangerouslySetInnerHTML={{ 
+                __html: (data.content || "Empty memory...")
+                  .replace(/<img[^>]*>/g, '') // Remove images from content preview
+                  .replace(/<[^>]+>/g, '') // Remove other HTML tags for plain text preview
+              }} 
+            />
             
             {/* Gradient Fade */}
-            <div className="absolute bottom-0 left-0 w-full h-5 bg-linear-to-t from-white to-transparent pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-full h-8 bg-linear-to-t from-white via-white/80 to-transparent pointer-events-none" />
           </div>
         </div>
       </div>
