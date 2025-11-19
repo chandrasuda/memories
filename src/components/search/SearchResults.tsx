@@ -70,8 +70,8 @@ export function SearchResults({ memories, answer }: SearchResultsProps) {
       {answer && (
         <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-[#EFEEEB] p-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0 text-white shadow-sm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.1 12a10.1 10.1 0 0 0 1.4 2.9l8.5-2.9z"/><path d="M12 12V2.1A10.1 10.1 0 0 0 9.1 3.5l2.9 8.5z"/></svg>
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm border border-gray-200">
+              <img src="/memories_icon.png" alt="Memories AI" className="w-6 h-6" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-p:text-gray-800 prose-headings:text-gray-900 prose-strong:text-gray-900 prose-ul:my-2 prose-li:my-0.5">
