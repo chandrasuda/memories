@@ -102,6 +102,53 @@ export function ExpandedNodeOverlay({ node, onClose }: ExpandedNodeOverlayProps)
         );
       }
 
+      case 'link-node': {
+        const data = node.data as any;
+        const hasImage = data.images && data.images.length > 0;
+        const imageUrl = hasImage ? data.images[0] : null;
+
+        return (
+          <div className="bg-[#242424] rounded-3xl overflow-hidden shadow-2xl max-w-2xl w-full relative animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full transition-colors z-10"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            {/* Large Preview Image */}
+            {imageUrl && (
+              <div className="w-full aspect-video bg-gray-900">
+                <img
+                  src={imageUrl}
+                  alt={data.label || "Link preview"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            <div className="p-8 flex flex-col gap-4">
+              {/* Title */}
+              <div className="font-bold text-2xl text-white leading-tight">
+                {data.label}
+              </div>
+
+              {/* URL */}
+              {data.url && (
+                <a 
+                  href={data.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 hover:underline text-lg truncate"
+                >
+                  {data.url}
+                </a>
+              )}
+            </div>
+          </div>
+        );
+      }
+
       default:
         return null;
     }

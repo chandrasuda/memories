@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react';
 import { MemoryNode } from './MemoryNode';
 import { ImageNode } from './ImageNode';
 import { MultiImageNode } from './MultiImageNode';
+import { LinkNode } from './LinkNode';
 import { ExpandedNodeOverlay } from './ExpandedNodeOverlay';
 import { fetchMemories, Memory } from '@/lib/supabase';
 
@@ -21,6 +22,7 @@ const nodeTypes: NodeTypes = {
   'memory-node': MemoryNode,
   'image-node': ImageNode,
   'multi-image-node': MultiImageNode,
+  'link-node': LinkNode,
 };
 
 // Function to create nodes from memories
@@ -34,16 +36,24 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
     const x = 300 + (col * 350);
     const y = 200 + (row * 250);
 
+    // Determine node type based on memory type or content
+    let type = 'memory-node';
+    if (memory.type === 'link') {
+      type = 'link-node';
+    } else if (memory.content && memory.content.startsWith('http') && !memory.content.includes(' ') && memory.content.length < 500) {
+      // Fallback detection for links if type is missing
+      type = 'link-node';
+    }
+
     return {
       id: memory.id,
-      type: 'memory-node',
+      type,
       position: { x, y },
       data: {
         label: memory.title,
         content: memory.content,
         images: memory.assets || [],
-        // Extract images from content if assets array is empty (fallback for old memories)
-        // This handles the case where images might be embedded in HTML content
+        url: type === 'link-node' ? memory.content : undefined, // For link nodes, content is often the URL or description
       },
     };
   });

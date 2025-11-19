@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
 
 interface ImageProps {
   src: string;
@@ -19,13 +18,15 @@ export function ImageComponent({
   return (
     <div className={cn("relative inline-block", className)}>
       <div className="rounded-xl border border-white bg-white p-0.5">
-        <Image
+        <img
           src={src}
           alt={alt}
           width={width || 300}
           height={height || 225}
           className="rounded-xl object-contain"
           style={{ aspectRatio: 'auto' }}
+          loading="lazy"
+          referrerPolicy="no-referrer"
         />
       </div>
     </div>

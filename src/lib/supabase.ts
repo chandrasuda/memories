@@ -15,6 +15,7 @@ export interface Memory {
   title: string
   content: string
   assets?: string[] // URLs to images/files/videos
+  type?: 'default' | 'link' // New field to distinguish memory types
   created_at: string
 }
 
@@ -22,6 +23,7 @@ export interface CreateMemoryData {
   title: string
   content: string
   assets?: string[]
+  type?: 'default' | 'link'
 }
 
 // Helper function to fetch memories
@@ -36,4 +38,18 @@ export async function fetchMemories() {
   }
 
   return data as Memory[];
+}
+
+export async function createMemory(memory: CreateMemoryData) {
+  const { data, error } = await supabase
+    .from('memories')
+    .insert([memory])
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as Memory;
 }
