@@ -2,17 +2,16 @@
 
 import { 
   ReactFlow, 
-  Background, 
   Controls, 
   useNodesState, 
   useEdgesState,
   NodeTypes,
-  BackgroundVariant
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { MemoryNode } from './MemoryNode';
 import { ImageNode } from './ImageNode';
+import { SeamlessBackground } from './SeamlessBackground';
 
 const nodeTypes: NodeTypes = {
   'memory-node': MemoryNode,
@@ -24,7 +23,7 @@ const initialNodes = [
     id: '1',
     type: 'memory-node',
     position: { x: 250, y: 250 },
-    data: { label: 'Welcome', content: 'Welcome to your new memory space.' },
+    data: { label: 'Welcome', content: 'Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. ' },
   },
   {
     id: '2',
@@ -45,7 +44,7 @@ export function InfiniteCanvas() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   return (
-    <div className="h-full w-full" style={{ backgroundColor: '#FDDAC6' }}>
+    <div className="h-full w-full bg-[#FDDAC6]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -57,7 +56,7 @@ export function InfiniteCanvas() {
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e5e7eb" />
+        <SeamlessBackground src="/memories_background.png" />
         <Controls className="bg-white border border-gray-200 shadow-sm" />
       </ReactFlow>
     </div>
