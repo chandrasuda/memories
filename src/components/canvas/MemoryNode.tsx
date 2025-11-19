@@ -13,21 +13,28 @@ export function MemoryNode({ data, selected }: NodeProps<MemoryNode>) {
   return (
     <div
       className={cn(
-        "relative min-w-[200px] max-w-[400px] rounded-xl border bg-white p-4 shadow-sm transition-all duration-200",
-        selected ? "border-black shadow-md ring-1 ring-black" : "border-gray-200 hover:border-gray-300"
+        "relative flex flex-col bg-white rounded-2xl p-5 transition-all duration-200",
+        "min-w-[250px] max-w-[350px]"
       )}
     >
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4">
+        {/* Title */}
         {data.label && (
-          <div className="font-medium text-xs text-gray-500 uppercase tracking-wider mb-1">
+          <div className="font-semibold text-lg text-black leading-tight">
             {data.label}
           </div>
         )}
-        <div className="text-gray-900 whitespace-pre-wrap font-sans leading-relaxed">
-          {data.content || "Empty memory..."}
+        
+        {/* Content */}
+        <div className="relative">
+          <div className="text-gray-500 font-normal text-sm leading-relaxed whitespace-pre-wrap max-h-[250px] overflow-hidden">
+            {data.content || "Empty memory..."}
+          </div>
+          
+          {/* Gradient Fade */}
+          <div className="absolute bottom-0 left-0 w-full h-12 bg-linear-to-t from-white to-transparent pointer-events-none" />
         </div>
       </div>
     </div>
   );
 }
-

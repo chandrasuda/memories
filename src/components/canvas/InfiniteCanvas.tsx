@@ -12,9 +12,11 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { MemoryNode } from './MemoryNode';
+import { ImageNode } from './ImageNode';
 
 const nodeTypes: NodeTypes = {
   'memory-node': MemoryNode,
+  'image-node': ImageNode,
 };
 
 const initialNodes = [
@@ -30,6 +32,12 @@ const initialNodes = [
     position: { x: 600, y: 100 },
     data: { label: 'Getting Started', content: 'Double click anywhere to create a new node (coming soon).' },
   },
+  {
+    id: '3',
+    type: 'image-node',
+    position: { x: 400, y: 400 },
+    data: { src: '/yosemite 1.png', alt: 'Yosemite Memory' },
+  },
 ];
 
 export function InfiniteCanvas() {
@@ -37,7 +45,7 @@ export function InfiniteCanvas() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   return (
-    <div className="h-full w-full bg-gray-50">
+    <div className="h-full w-full" style={{ backgroundColor: '#FDDAC6' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
