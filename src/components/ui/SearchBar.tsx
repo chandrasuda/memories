@@ -4,32 +4,25 @@
 import { Button } from "@/components/ui/button";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useSearch } from "@/context/SearchContext";
 
 export function SearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [isPending, startTransition] = useTransition();
-  const { isSearching, triggerSearch } = useSearch();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(() => {
       if (query.trim()) {
-        const currentQ = searchParams.get("q");
-        if (currentQ === query) {
-          triggerSearch();
-        } else {
-          router.push(`/?q=${encodeURIComponent(query)}`);
-        }
+        router.push(`/search?q=${encodeURIComponent(query)}`);
       } else {
         router.push("/");
       }
     });
   };
 
-  const isLoading = isPending || isSearching;
+  const isLoading = isPending;
 
   return (
     <div className="fixed bottom-[30px] left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4">
