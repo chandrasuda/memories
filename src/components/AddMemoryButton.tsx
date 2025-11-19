@@ -171,23 +171,23 @@ export function AddMemoryButton() {
         <DropdownMenuContent align="end" className="w-48 bg-white border border-gray-200 shadow-lg rounded-xl p-1 z-[60]">
           <Link href="/editor">
             <DropdownMenuItem className="cursor-pointer py-3 px-4 hover:bg-gray-100 rounded-lg outline-none focus:bg-gray-100">
-              <PenTool className="mr-3 h-4 w-4" />
-              <span className="font-medium">Editor</span>
+              <PenTool className="mr-3 h-4 w-4 text-black/90" />
+              <span className="font-medium text-black/90">Editor</span>
             </DropdownMenuItem>
           </Link>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="cursor-pointer py-3 px-4 hover:bg-gray-100 rounded-lg outline-none focus:bg-gray-100"
             onSelect={() => setIsLinkDialogOpen(true)}
           >
-            <LinkIcon className="mr-3 h-4 w-4" />
-            <span className="font-medium">Links</span>
+            <LinkIcon className="mr-3 h-4 w-4 text-black/90" />
+            <span className="font-medium text-black/90">Links</span>
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="cursor-pointer py-3 px-4 hover:bg-gray-100 rounded-lg outline-none focus:bg-gray-100 relative"
             onSelect={(e) => e.preventDefault()}
           >
-            <ImageIcon className="mr-3 h-4 w-4" />
-            <span className="font-medium">
+            <ImageIcon className="mr-3 h-4 w-4 text-black/90" />
+            <span className="font-medium text-black/90">
               {isUploading ? 'Uploading...' : 'Media'}
             </span>
             <input
@@ -216,7 +216,7 @@ export function AddMemoryButton() {
               placeholder="https://example.com"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="flex h-12 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-base ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+              className="flex h-12 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-base text-black/90 ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   handleSaveLink();
