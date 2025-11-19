@@ -12,7 +12,7 @@ export type ImageNode = Node<ImageNodeData, 'image-node'>;
 
 export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
   return (
-    <div className="relative">
+    <div className="relative drop-shadow-xl">
       <ImageComponent
         src={data.src}
         alt={data.alt || 'Memory image'}

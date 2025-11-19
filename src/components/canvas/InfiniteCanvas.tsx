@@ -6,16 +6,18 @@ import {
   useNodesState, 
   useEdgesState,
   NodeTypes,
+  Background,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { MemoryNode } from './MemoryNode';
 import { ImageNode } from './ImageNode';
-import { SeamlessBackground } from './SeamlessBackground';
+import { MultiImageNode } from './MultiImageNode';
 
 const nodeTypes: NodeTypes = {
   'memory-node': MemoryNode,
   'image-node': ImageNode,
+  'multi-image-node': MultiImageNode,
 };
 
 const initialNodes = [
@@ -23,7 +25,7 @@ const initialNodes = [
     id: '1',
     type: 'memory-node',
     position: { x: 250, y: 250 },
-    data: { label: 'Welcome', content: 'Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. ' },
+    data: { label: 'Welcome', content: 'Welcome to your new memory space. Hi Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. Welcome to your new memory space. ' },
   },
   {
     id: '2',
@@ -35,7 +37,19 @@ const initialNodes = [
     id: '3',
     type: 'image-node',
     position: { x: 400, y: 400 },
-    data: { src: '/yosemite 1.png', alt: 'Yosemite Memory' },
+    data: { src: '/bill-gates-young.jpg', alt: 'Bill Gates Memory' },
+  },
+  {
+    id: '4',
+    type: 'multi-image-node',
+    position: { x: 700, y: 300 },
+    data: {
+      images: [
+        '/bill-gates-young.jpg',
+        '/steve jobs.png',
+        '/bill-gates-young.jpg'
+      ]
+    },
   },
 ];
 
@@ -44,7 +58,7 @@ export function InfiniteCanvas() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   return (
-    <div className="h-full w-full bg-[#FDDAC6]">
+    <div className="h-full w-full bg-[#F0F0F0]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -56,10 +70,9 @@ export function InfiniteCanvas() {
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <SeamlessBackground src="/memories_background.png" />
+        <Background color="#F0F0F0" gap={16} />
         <Controls className="bg-white border border-gray-200 shadow-sm" />
       </ReactFlow>
     </div>
   );
 }
-

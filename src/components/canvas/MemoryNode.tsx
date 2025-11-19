@@ -13,7 +13,7 @@ export function MemoryNode({ data, selected }: NodeProps<MemoryNode>) {
   return (
     <div
       className={cn(
-        "relative flex flex-col bg-white rounded-2xl p-5 transition-all duration-200 shadow-lg shadow-black/5",
+        "relative flex flex-col bg-white rounded-2xl p-5 transition-all duration-200 drop-shadow-xl",
         "w-[290px] h-[200px]"
       )}
     >
@@ -27,7 +27,7 @@ export function MemoryNode({ data, selected }: NodeProps<MemoryNode>) {
         
         {/* Content */}
         <div className="relative flex-1 min-h-0">
-          <div className="text-gray-500 font-normal text-[11px] leading-relaxed whitespace-pre-wrap h-full overflow-hidden">
+          <div className="text-black font-semibold text-[11px] leading-relaxed whitespace-pre-wrap h-full overflow-hidden">
             {data.content || "Empty memory..."}
           </div>
           
