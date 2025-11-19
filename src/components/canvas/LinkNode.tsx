@@ -40,6 +40,13 @@ export function LinkNode({ data }: NodeProps<LinkNode>) {
         <div className="font-semibold text-[15px] text-white leading-tight line-clamp-2">
           {data.label || "Untitled Link"}
         </div>
+
+        {/* Description (Tweet text or page description) */}
+        {data.content && (
+          <div className="text-[13px] text-gray-300 leading-snug line-clamp-3 mb-1">
+            {data.content}
+          </div>
+        )}
         
         {/* Domain/Subtitle */}
         <div className="text-[13px] text-gray-400 leading-snug truncate">

@@ -15,7 +15,7 @@ export interface Memory {
   title: string
   content: string
   assets?: string[] // URLs to images/files/videos
-  type?: 'default' | 'link' // New field to distinguish memory types
+  type?: 'default' | 'link' | 'image' // New field to distinguish memory types
   created_at: string
 }
 
@@ -23,7 +23,7 @@ export interface CreateMemoryData {
   title: string
   content: string
   assets?: string[]
-  type?: 'default' | 'link'
+  type?: 'default' | 'link' | 'image'
 }
 
 // Helper function to fetch memories

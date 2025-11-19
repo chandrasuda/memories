@@ -103,33 +103,33 @@ export function TiptapEditor({
 
           for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            
-            // Create unique filename with timestamp
-            const fileName = `memory-images/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-            // Upload to Supabase Storage
-            const { data, error: uploadError } = await supabase.storage
-              .from('memories-images')
-              .upload(fileName, file, {
-                cacheControl: '3600',
-                upsert: false
-              });
+          // Create unique filename with timestamp
+          const fileName = `memory-images/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-            if (uploadError) {
+          // Upload to Supabase Storage
+          const { data, error: uploadError } = await supabase.storage
+            .from('memories-images')
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (uploadError) {
               console.error('Upload failed for file:', file.name, uploadError);
               continue; // Skip this file and try the next one
-            }
+          }
 
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-              .from('memories-images')
-              .getPublicUrl(fileName);
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('memories-images')
+            .getPublicUrl(fileName);
 
-            // Insert image into editor
-            editor.chain().focus().setImage({ src: publicUrl }).run();
+          // Insert image into editor
+          editor.chain().focus().setImage({ src: publicUrl }).run();
 
-            // Add URL to assets array
-            setAssets(prev => [...prev, publicUrl]);
+          // Add URL to assets array
+          setAssets(prev => [...prev, publicUrl]);
           }
 
         } catch (error) {

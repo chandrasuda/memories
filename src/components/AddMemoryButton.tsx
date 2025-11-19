@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,13 +20,80 @@ import {
 } from '@/components/ui/dialog';
 import { extractMetadata } from '@/app/actions';
 import { createMemory } from '@/lib/supabase';
-import { Link as LinkIcon, PenTool, Loader2 } from 'lucide-react';
+import { Link as LinkIcon, PenTool, Loader2, Image as ImageIcon } from 'lucide-react';
 
 export function AddMemoryButton() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Handle incoming save_url parameter from extension
+  useEffect(() => {
+    const saveUrl = searchParams.get('save_url');
+    if (saveUrl) {
+      setUrl(saveUrl);
+      setIsLinkDialogOpen(true);
+      // Clean up URL
+      window.history.replaceState({}, '', '/');
+    }
+  }, [searchParams]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      // Dynamically import supabase to avoid build issues
+      const { supabase } = await import('@/lib/supabase');
+      const uploadedUrls: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileName = `memory-images/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('memories-images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Upload failed for file:', file.name, uploadError);
+          continue;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('memories-images')
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(publicUrl);
+      }
+
+      if (uploadedUrls.length > 0) {
+        // Note: We are NOT sending 'type' field to avoid errors if the column doesn't exist in DB yet.
+        // The InfiniteCanvas will infer it's an image node based on assets presence and empty content.
+        await createMemory({
+          title: 'Image Memory', // Placeholder title
+          content: '', // Empty content for image-only memories
+          assets: uploadedUrls,
+        });
+        
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      alert('Failed to upload images. Please try again.');
+    } finally {
+      setIsUploading(false);
+      // Reset input
+      event.target.value = '';
+    }
+  };
 
   const handleSaveLink = async () => {
     if (!url) return;
@@ -64,9 +131,10 @@ export function AddMemoryButton() {
       // 2. Create memory
       // Note: We are NOT sending 'type' field to avoid errors if the column doesn't exist in DB yet.
       // The InfiniteCanvas will infer it's a link node based on content being a URL.
+      // We store URL and description in content separated by a newline to preserve both.
       await createMemory({
         title: metadata.title,
-        content: metadata.url, // Store URL in content for link types
+        content: `${metadata.url}\n${metadata.description || ''}`, 
         assets: metadata.image ? [metadata.image] : [],
       });
 
@@ -109,6 +177,23 @@ export function AddMemoryButton() {
           >
             <LinkIcon className="mr-3 h-4 w-4" />
             <span className="font-medium">Links</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="cursor-pointer py-3 px-4 hover:bg-gray-100 rounded-lg outline-none focus:bg-gray-100 relative"
+            onSelect={(e) => e.preventDefault()}
+          >
+            <ImageIcon className="mr-3 h-4 w-4" />
+            <span className="font-medium">
+              {isUploading ? 'Uploading...' : 'Media'}
+            </span>
+            <input
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+            />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

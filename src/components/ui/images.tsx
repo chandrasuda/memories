@@ -16,14 +16,14 @@ export function ImageComponent({
   className
 }: ImageProps) {
   return (
-    <div className={cn("relative inline-block", className)}>
-      <div className="rounded-xl border border-white bg-white p-0.5">
+    <div className={cn("relative inline-block overflow-hidden rounded-2xl", className)}>
+      <div className="rounded-2xl border border-white bg-white p-0.5 overflow-hidden">
         <img
           src={src}
           alt={alt}
           width={width || 300}
           height={height || 225}
-          className="rounded-xl object-contain"
+          className="rounded-2xl object-cover w-full h-full"
           style={{ aspectRatio: 'auto' }}
           loading="lazy"
           referrerPolicy="no-referrer"
