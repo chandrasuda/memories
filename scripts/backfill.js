@@ -46,9 +46,9 @@ async function backfill() {
   for (const memory of memories) {
     console.log(`Processing: "${memory.title}"...`);
     
-    // Construct text to embed (Title + Description/Content + URL)
-    // If content is a URL, we might want to just use title, but usually content has description too.
-    const contentToEmbed = `${memory.title} ${memory.content || ''}`;
+    // Construct text to embed (Title + Content + AI Description)
+    // Include all available context for richer embeddings
+    const contentToEmbed = `${memory.title} ${memory.content || ''} ${memory.ai_description || ''}`;
     
     const embedding = await generateEmbedding(contentToEmbed);
 

@@ -17,6 +17,7 @@ export interface Memory {
   assets?: string[] // URLs to images/files/videos
   type?: 'default' | 'link' | 'image' // New field to distinguish memory types
   category?: string
+  ai_description?: string // AI-generated descriptions for images
   created_at: string
   x?: number
   y?: number
@@ -29,6 +30,7 @@ export interface CreateMemoryData {
   assets?: string[]
   type?: 'default' | 'link' | 'image'
   category?: string
+  ai_description?: string
   x?: number
   y?: number
   embedding?: number[]
@@ -92,7 +94,7 @@ export async function searchMemories(queryEmbedding: number[], threshold: number
     throw error;
   }
 
-  return data as (Memory & { similarity: number })[];
+  return data as (Memory & { similarity: number; ai_description?: string })[];
 }
 
 export async function createMemory(memory: CreateMemoryData) {
@@ -107,4 +109,20 @@ export async function createMemory(memory: CreateMemoryData) {
   }
 
   return data as Memory;
+}
+
+export async function updateMemoryEmbedding(id: string, embedding: number[], ai_description?: string) {
+  const updateData: { embedding: number[]; ai_description?: string } = { embedding };
+  if (ai_description !== undefined) {
+    updateData.ai_description = ai_description;
+  }
+  
+  const { error } = await supabase
+    .from('memories')
+    .update(updateData)
+    .eq('id', id);
+
+  if (error) {
+    throw error;
+  }
 }

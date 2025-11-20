@@ -74,13 +74,21 @@ export function AddMemoryButton() {
       }
 
       if (uploadedUrls.length > 0) {
-        // Note: We are NOT sending 'type' field to avoid errors if the column doesn't exist in DB yet.
-        // The InfiniteCanvas will infer it's an image node based on assets presence and empty content.
-        await createMemoryWithEmbedding({
-          title: 'Image Memory', // Placeholder title
-          content: '', // Empty content for image-only memories
-          assets: uploadedUrls,
-        });
+        // For all image uploads (single or multi), generate AI descriptions automatically
+        // This enables better search functionality for image memories
+        const { analyzeImages } = await import('@/app/actions');
+        try {
+          await analyzeImages(uploadedUrls);
+        } catch (error) {
+          console.error('Failed to analyze images:', error);
+          // Fallback: create memory without AI description if analysis fails
+          await createMemoryWithEmbedding({
+            title: 'Image Memory',
+            content: '',
+            assets: uploadedUrls,
+            type: 'image',
+          });
+        }
         
         window.location.reload();
       }

@@ -212,7 +212,7 @@ export function InfiniteCanvas({ isSorted = false, isClustered = false }: Infini
 
     // Group all memories by category, including a fallback "No category"
     const NO_CATEGORY_KEY = 'No category';
-    const categoryMap = new Map<string, ReturnType<typeof processMemory>[]>();
+    const categoryMap = new Map<string, ProcessedMemory[]>();
     processed.forEach((m) => {
       const key =
         m.category && m.category.trim().length > 0 ? m.category : NO_CATEGORY_KEY;
@@ -225,7 +225,7 @@ export function InfiniteCanvas({ isSorted = false, isClustered = false }: Infini
 
     type CategoryMeta = {
       key: string;
-      memories: ReturnType<typeof processMemory>[];
+      memories: ProcessedMemory[];
       perRing: number;
       ringRadii: number[];
       ringNodeCounts: number[];
@@ -243,7 +243,7 @@ export function InfiniteCanvas({ isSorted = false, isClustered = false }: Infini
       const memoriesInCategory = categoryMap.get(category) ?? [];
 
       // Partition memories into rings
-      const rings: ReturnType<typeof processMemory>[][] = [];
+      const rings: ProcessedMemory[][] = [];
       memoriesInCategory.forEach((m, idx) => {
         const ringIndex = Math.floor(idx / PER_RING);
         if (!rings[ringIndex]) {
