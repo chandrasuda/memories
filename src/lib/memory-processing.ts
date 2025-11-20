@@ -43,6 +43,7 @@ export function processMemory(memory: Memory) {
       label: memory.title,
       content: memory.content,
       images: memory.assets || [],
+      category: memory.category,
   };
 
   if (type === 'link-node') {

@@ -7,6 +7,7 @@ export type LinkNodeData = {
   content?: string; // This will store the description
   url?: string; // This will store the actual URL
   images?: string[];
+  category?: string;
 };
 
 export type LinkNode = Node<LinkNodeData, 'link-node'>;
@@ -36,9 +37,16 @@ export function LinkNode({ data }: NodeProps<LinkNode>) {
 
       {/* Content Section - Bottom */}
       <div className="p-4 flex flex-col gap-1 bg-[#242424]">
-        {/* Title */}
-        <div className="font-semibold text-[15px] text-white leading-tight line-clamp-2">
-          {data.label || "Untitled Link"}
+        {/* Title and Category */}
+        <div className="flex justify-between items-start gap-2">
+             <div className="font-semibold text-[15px] text-white leading-tight line-clamp-2">
+              {data.label || "Untitled Link"}
+            </div>
+             {data.category && (
+                <span className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full shrink-0 border border-gray-600">
+                    {data.category}
+                </span>
+            )}
         </div>
 
         {/* Description (Tweet text or page description) */}

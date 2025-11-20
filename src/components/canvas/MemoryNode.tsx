@@ -8,6 +8,7 @@ export type MemoryNodeData = {
   content?: string;
   type?: 'text' | 'image' | 'video' | 'mixed';
   images?: string[];
+  category?: string;
 };
 
 export type MemoryNode = Node<MemoryNodeData, 'memory-node'>;
@@ -24,12 +25,19 @@ export function MemoryNode({ data }: NodeProps<MemoryNode>) {
       )}
     >
       <div className="flex flex-col gap-3 h-full">
-        {/* Title */}
-        {data.label && (
-          <div className="font-semibold text-[14px] text-black leading-tight shrink-0">
-            {data.label}
-          </div>
-        )}
+        {/* Title and Category */}
+        <div className="flex justify-between items-start gap-2">
+          {data.label && (
+            <div className="font-semibold text-[14px] text-black leading-tight">
+              {data.label}
+            </div>
+          )}
+          {data.category && (
+             <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full shrink-0 border border-gray-200">
+                 {data.category}
+             </span>
+          )}
+        </div>
         
         <div className="flex flex-1 gap-5 min-h-0">
           {/* Image Section (Left) */}
