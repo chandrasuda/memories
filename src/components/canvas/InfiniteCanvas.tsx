@@ -7,6 +7,7 @@ import {
   NodeTypes,
   Background,
   Node,
+  Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useState, useEffect, useCallback } from 'react';
@@ -17,6 +18,7 @@ import { ImageNode } from './ImageNode';
 import { MultiImageNode } from './MultiImageNode';
 import { LinkNode } from './LinkNode';
 import { ExpandedNodeOverlay } from './ExpandedNodeOverlay';
+import { ClusterNode } from './ClusterNode';
 import { fetchMemories, Memory, updateMemoryPosition, updateMemoryCategory, deleteMemory } from '@/lib/supabase';
 import { CanvasContextMenu } from './CanvasContextMenu';
 
@@ -25,6 +27,7 @@ const nodeTypes: NodeTypes = {
   'image-node': ImageNode,
   'multi-image-node': MultiImageNode,
   'link-node': LinkNode,
+  'cluster-node': ClusterNode,
 };
 
 // Helper to check intersection between two rectangles with padding
@@ -166,11 +169,12 @@ function createSortedNodes(memories: Memory[]): Node[] {
 
 interface InfiniteCanvasProps {
     isSorted?: boolean;
+    isClustered?: boolean;
 }
 
-export function InfiniteCanvas({ isSorted = false }: InfiniteCanvasProps) {
+export function InfiniteCanvas({ isSorted = false, isClustered = false }: InfiniteCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
-  const [edges, , onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const [rawMemories, setRawMemories] = useState<Memory[]>([]);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
@@ -189,49 +193,266 @@ export function InfiniteCanvas({ isSorted = false }: InfiniteCanvasProps) {
     loadMemories();
   }, []);
 
+  // Helper to create a clustered layout around category centers without touching Supabase coords
+  function createClusterLayout(memories: Memory[]): { nodes: Node[]; edges: Edge[] } {
+    if (memories.length === 0) {
+      return { nodes: [], edges: [] };
+    }
+
+    const baseNodes = createNodesFromMemories(memories);
+    const processed = memories.map(processMemory);
+
+    const nodesById = new Map<string, Node>();
+    baseNodes.forEach((n) => nodesById.set(n.id, { ...n }));
+
+    // Group all memories by category, including a fallback "No category"
+    const NO_CATEGORY_KEY = 'No category';
+    const categoryMap = new Map<string, ReturnType<typeof processMemory>[]>();
+    processed.forEach((m) => {
+      const key =
+        m.category && m.category.trim().length > 0 ? m.category : NO_CATEGORY_KEY;
+      const list = categoryMap.get(key) ?? [];
+      list.push(m);
+      categoryMap.set(key, list);
+    });
+
+    const categories = Array.from(categoryMap.keys());
+
+    type CategoryMeta = {
+      key: string;
+      memories: ReturnType<typeof processMemory>[];
+      perRing: number;
+      ringRadii: number[];
+      ringNodeCounts: number[];
+      outerRadius: number;
+    };
+
+    const PER_RING = 10;
+    const BASE_RADIUS = 380;
+    const RING_GAP = 260;
+    const NODE_ARC_MARGIN = 40;
+    const RADIAL_MARGIN = 80;
+    const CLUSTER_MARGIN = 220;
+
+    const categoryMeta: CategoryMeta[] = categories.map((category) => {
+      const memoriesInCategory = categoryMap.get(category) ?? [];
+
+      // Partition memories into rings
+      const rings: ReturnType<typeof processMemory>[][] = [];
+      memoriesInCategory.forEach((m, idx) => {
+        const ringIndex = Math.floor(idx / PER_RING);
+        if (!rings[ringIndex]) {
+          rings[ringIndex] = [];
+        }
+        rings[ringIndex].push(m);
+      });
+
+      const ringRadii: number[] = [];
+      const ringNodeCounts: number[] = [];
+
+      let maxNodeHeight = 0;
+
+      rings.forEach((ring, ringIndex) => {
+        let totalArcLength = 0;
+
+        ring.forEach((mem) => {
+          const width = mem._width ?? 290;
+          const height = mem._height ?? 200;
+          totalArcLength += width + NODE_ARC_MARGIN;
+          maxNodeHeight = Math.max(maxNodeHeight, height);
+        });
+
+        const baseRadius = BASE_RADIUS + ringIndex * RING_GAP;
+        const minRadiusForWidths =
+          totalArcLength > 0 ? totalArcLength / (2 * Math.PI) : 0;
+        const radius = Math.max(baseRadius, minRadiusForWidths);
+
+        ringRadii[ringIndex] = radius;
+        ringNodeCounts[ringIndex] = ring.length;
+      });
+
+      const lastRingRadius =
+        ringRadii.length > 0 ? ringRadii[ringRadii.length - 1] : BASE_RADIUS;
+      const outerRadius = lastRingRadius + maxNodeHeight / 2 + RADIAL_MARGIN;
+
+      return {
+        key: category,
+        memories: memoriesInCategory,
+        perRing: PER_RING,
+        ringRadii,
+        ringNodeCounts,
+        outerRadius,
+      };
+    });
+
+    const totalSize = categoryMeta.reduce(
+      (sum, meta) => sum + meta.outerRadius * 2 + CLUSTER_MARGIN,
+      0
+    );
+
+    const MIN_CLUSTER_CENTER_RADIUS = 1000;
+    const circleRadius = Math.max(MIN_CLUSTER_CENTER_RADIUS, totalSize / (2 * Math.PI));
+
+    const clusterNodes: Node[] = [];
+    const edges: Edge[] = [];
+
+    let currentAngle = 0;
+
+    categoryMeta.forEach((meta) => {
+      const segmentSize = meta.outerRadius * 2 + CLUSTER_MARGIN;
+      const angleSpan = (segmentSize / totalSize) * 2 * Math.PI;
+      const angle = currentAngle + angleSpan / 2;
+      currentAngle += angleSpan;
+
+      const centerX = circleRadius * Math.cos(angle);
+      const centerY = circleRadius * Math.sin(angle);
+
+      const clusterId = `cluster-${meta.key}`;
+
+      clusterNodes.push({
+        id: clusterId,
+        type: 'cluster-node',
+        position: { x: centerX, y: centerY },
+        data: {
+          label: meta.key,
+          count: meta.memories.length,
+          __clusterKey: meta.key,
+        },
+        draggable: true,
+      });
+
+      meta.memories.forEach((m, idx) => {
+        const node = nodesById.get(m.id);
+        if (!node) return;
+
+        const ring = Math.floor(idx / meta.perRing);
+        const posInRing = idx % meta.perRing;
+
+        const ringRadius = meta.ringRadii[ring] ?? BASE_RADIUS;
+        const nodesInRing = meta.ringNodeCounts[ring] || 1;
+        const theta = (2 * Math.PI * posInRing) / nodesInRing;
+
+        const width = m._width ?? 290;
+        const height = m._height ?? 200;
+
+        const x = centerX + ringRadius * Math.cos(theta) - width / 2;
+        const y = centerY + ringRadius * Math.sin(theta) - height / 2;
+
+        nodesById.set(m.id, {
+          ...node,
+          position: { x, y },
+          data: {
+            ...(node.data ?? {}),
+            __clusterKey: meta.key,
+          },
+        });
+
+        edges.push({
+          id: `edge-${clusterId}-${m.id}`,
+          source: clusterId,
+          target: m.id,
+          type: 'smoothstep',
+          style: {
+            stroke: '#000000',
+            strokeWidth: 1.4,
+          },
+        });
+      });
+    });
+
+    const finalNodes: Node[] = [...nodesById.values(), ...clusterNodes];
+
+    return { nodes: finalNodes, edges };
+  }
+
   // Recalculate nodes when dependencies change
   useEffect(() => {
       if (rawMemories.length === 0) return;
+
+      if (isClustered) {
+          const { nodes: clusteredNodes, edges: clusteredEdges } = createClusterLayout(rawMemories);
+          setNodes(clusteredNodes);
+          setEdges(clusteredEdges);
+          return;
+      }
+
+      // Not clustered: clear any cluster edges
+      setEdges([]);
 
       if (isSorted) {
           const sortedNodes = createSortedNodes(rawMemories);
           setNodes(sortedNodes);
       } else {
-          // Only create nodes if we have a different number of memories or if force refresh
-          // We need to respect existing node positions if they are already in 'nodes' state
-          // to prevent re-layouting everything on minor updates like category change or deletion
-          
-          setNodes((currentNodes) => {
-             const newNodes = createNodesFromMemories(rawMemories);
-             
-             // If we already have nodes, try to preserve their positions
-             // unless it's a new node which will have its position from spiral layout
-             return newNodes.map(newNode => {
-                 const existingNode = currentNodes.find(n => n.id === newNode.id);
-                 if (existingNode) {
-                     return {
-                         ...newNode,
-                         position: existingNode.position
-                     };
-                 }
-                 return newNode;
-             });
-          });
+          // Default free layout based on Supabase coordinates / spiral
+          const freeNodes = createNodesFromMemories(rawMemories);
+          setNodes(freeNodes);
       }
-  }, [isSorted, rawMemories, setNodes]);
+  }, [isSorted, isClustered, rawMemories, setNodes, setEdges]);
 
   const handleNodeDoubleClick = (event: React.MouseEvent, node: Node) => {
     setExpandedNodeId(node.id);
   };
-  
+
+  const handleNodeDrag = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      if (!isClustered || !node.id.startsWith('cluster-')) {
+        return;
+      }
+
+      setNodes((prevNodes) => {
+        const prevClusterNode = prevNodes.find((n) => n.id === node.id);
+        if (!prevClusterNode) return prevNodes;
+
+        const dx = node.position.x - prevClusterNode.position.x;
+        const dy = node.position.y - prevClusterNode.position.y;
+
+        if (dx === 0 && dy === 0) return prevNodes;
+
+        const clusterKey =
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (node.data as any)?.__clusterKey ??
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (node.data as any)?.label;
+
+        return prevNodes.map((n) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const nClusterKey = (n.data as any)?.__clusterKey;
+
+          if (n.id === node.id) {
+            return {
+              ...node,
+              data: {
+                ...(node.data ?? {}),
+                __clusterKey: clusterKey,
+              },
+            };
+          }
+
+          if (nClusterKey !== clusterKey) {
+            return n;
+          }
+
+          return {
+            ...n,
+            position: {
+              x: n.position.x + dx,
+              y: n.position.y + dy,
+            },
+          };
+        });
+      });
+    },
+    [isClustered, setNodes]
+  );
+
   const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
-    // Only save if NOT sorted
-    if (!isSorted) {
+    // Only save if NOT sorted and NOT clustered, and ignore synthetic cluster nodes
+    if (!isSorted && !isClustered && !node.id.startsWith('cluster-')) {
         updateMemoryPosition(node.id, node.position.x, node.position.y).catch(err => {
             console.error("Failed to save node position:", err);
         });
     }
-  }, [isSorted]);
+  }, [isSorted, isClustered]);
 
   const expandedNode = nodes.find(n => n.id === expandedNodeId) || null;
 
@@ -310,12 +531,13 @@ export function InfiniteCanvas({ isSorted = false }: InfiniteCanvasProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
-        fitView={!isSorted} 
+        fitView={isClustered || !isSorted} 
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
         onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeDrag={handleNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={onPaneClick}

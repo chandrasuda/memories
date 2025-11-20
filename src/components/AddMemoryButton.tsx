@@ -162,7 +162,7 @@ export function AddMemoryButton() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            className="fixed top-6 right-6 rounded-full px-6 py-3 font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer z-50"
+            className="rounded-full px-6 py-3 font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
             style={{ backgroundColor: '#000', boxShadow: '0 0 8px 0 #FFF inset' }}
           >
             Add Memories
