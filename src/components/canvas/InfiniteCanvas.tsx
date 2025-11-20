@@ -12,7 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useState, useEffect, useCallback } from 'react';
 
-import { processMemory } from '@/lib/memory-processing';
+import { processMemory, ProcessedMemory } from '@/lib/memory-processing';
 import { MemoryNode } from './MemoryNode';
 import { ImageNode } from './ImageNode';
 import { MultiImageNode } from './MultiImageNode';
@@ -54,7 +54,7 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
   const centerY = 0;
 
   // 1. Pre-process memories to determine dimensions and types
-  const processed = memories.map(processMemory);
+  const processed = memories.map(processMemory) as ProcessedMemory[];
 
   // 2. Sort by created_at so older memories tend to be closer to the center
   // and newer memories naturally get pushed further outward.
@@ -66,16 +66,16 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
 
   // 3. Place nodes sequentially, always avoiding already placed rectangles.
   sorted.forEach((m) => {
-    let x = m.x;
-    let y = m.y;
+    let x: number = m.x ?? 0;
+    let y: number = m.y ?? 0;
 
     // If no saved position, find one using a spiral that expands out
     // from the origin while avoiding all previously placed nodes.
     if (typeof x !== 'number' || typeof y !== 'number') {
       if (placedRects.length === 0) {
         // First node ever: put it at the center.
-        x = centerX - m._width / 2;
-        y = centerY - m._height / 2;
+        x = centerX - (m._width as number) / 2;
+        y = centerY - (m._height as number) / 2;
       } else {
         const a = 0;   // spiral offset
         const b = 25;  // distance between spiral arms
@@ -86,14 +86,14 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
           const r = a + b * angle;
           const scale = 1 / Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle)));
 
-          const candidateX = centerX + (r * Math.cos(angle)) * scale - m._width / 2;
-          const candidateY = centerY + (r * Math.sin(angle)) * scale - m._height / 2;
+          const candidateX = centerX + (r * Math.cos(angle)) * scale - (m._width as number) / 2;
+          const candidateY = centerY + (r * Math.sin(angle)) * scale - (m._height as number) / 2;
 
           const candidateRect = {
             x: candidateX,
             y: candidateY,
-            w: m._width,
-            h: m._height,
+            w: m._width as number,
+            h: m._height as number,
           };
 
           const collision = placedRects.some((rect) =>
@@ -111,7 +111,12 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
 
           // Safety: bail out of an extreme loop, even though in practice
           // we should find a free spot much earlier.
-          if (angle > 2000) break;
+          if (angle > 2000) {
+            // Fallback: place at a random position if spiral fails
+            x = centerX + Math.random() * 1000 - 500;
+            y = centerY + Math.random() * 1000 - 500;
+            break;
+          }
         }
       }
     }
@@ -131,7 +136,7 @@ function createNodesFromMemories(memories: Memory[]): Node[] {
 }
 
 function createSortedNodes(memories: Memory[]): Node[] {
-    const processed = memories.map(processMemory);
+    const processed = memories.map(processMemory) as ProcessedMemory[];
     const nodes: Node[] = [];
     
     const COLUMNS = 4;
@@ -147,13 +152,13 @@ function createSortedNodes(memories: Memory[]): Node[] {
     processed.forEach((m, index) => {
         const colIndex = index % COLUMNS;
         
-        const x = startX + (colIndex * (300 + GAP_X)) - (m._width / 2) + (300/2); // Centered in column slot
-        
+        const x = startX + (colIndex * (300 + GAP_X)) - ((m._width as number) / 2) + (300/2); // Centered in column slot
+
         // Use accumulated height
         const y = columnHeights[colIndex];
-        
+
         // Update column height
-        columnHeights[colIndex] = y + m._height + GAP_Y;
+        columnHeights[colIndex] = y + (m._height as number) + GAP_Y;
 
         nodes.push({
             id: m.id,
@@ -200,7 +205,7 @@ export function InfiniteCanvas({ isSorted = false, isClustered = false }: Infini
     }
 
     const baseNodes = createNodesFromMemories(memories);
-    const processed = memories.map(processMemory);
+    const processed = memories.map(processMemory) as ProcessedMemory[];
 
     const nodesById = new Map<string, Node>();
     baseNodes.forEach((n) => nodesById.set(n.id, { ...n }));

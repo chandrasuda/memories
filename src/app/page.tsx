@@ -4,7 +4,7 @@ import { InfiniteCanvas } from "@/components/canvas/InfiniteCanvas";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { AddMemoryButton } from "@/components/AddMemoryButton";
 import { SearchProvider } from "@/context/SearchContext";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -15,11 +15,15 @@ export default function Home() {
     <SearchProvider>
       <main className="h-screen w-screen overflow-hidden relative">
         <InfiniteCanvas isSorted={isSorted} isClustered={isClustered} />
-        <SearchBar />
+        <Suspense fallback={<div>Loading search...</div>}>
+          <SearchBar />
+        </Suspense>
 
         {/* Button Container */}
         <div className="fixed top-6 right-6 flex flex-col gap-4 z-50">
-          <AddMemoryButton />
+          <Suspense fallback={<div>Loading...</div>}>
+            <AddMemoryButton />
+          </Suspense>
           <Button
             onClick={() => setIsSorted(!isSorted)}
             className="rounded-full px-6 py-3 font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"

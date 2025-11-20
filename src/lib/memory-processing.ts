@@ -1,7 +1,24 @@
 import { Memory } from '@/lib/supabase';
 
+export interface ProcessedMemory {
+  id: string;
+  title: string;
+  content: string;
+  assets?: string[];
+  type?: 'default' | 'link' | 'image';
+  category?: string;
+  created_at: string;
+  x?: number;
+  y?: number;
+  embedding?: number[];
+  _type: string;
+  _width: number;
+  _height: number;
+  _data: Record<string, any>;
+}
+
 // Preprocess memory to determine type and dimensions
-export function processMemory(memory: Memory) {
+export function processMemory(memory: Memory): ProcessedMemory {
   let type = 'memory-node';
   let width = 300; // Default width
   let height = 300; // Default height estimate
