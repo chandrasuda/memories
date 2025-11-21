@@ -109,16 +109,36 @@ Be concise and descriptive as this will be used for searching and finding this i
   }
 }
 
-export async function generateAnswerWithFiltering(query: string, context: string, memoryCount: number = 0): Promise<{ answer: string; relevantMemoryIds: string[] }> {
+import type { ConversationMessage } from '@/app/actions';
+
+export async function generateAnswerWithFiltering(
+  query: string, 
+  context: string, 
+  memoryCount: number = 0,
+  conversationHistory: ConversationMessage[] = [],
+  isFollowUp: boolean = false
+): Promise<{ answer: string; relevantMemoryIds: string[] }> {
   if (!apiKey) return { answer: "I cannot answer because the API key is missing.", relevantMemoryIds: [] };
 
   try {
+    // Build conversation context if there's history
+    let conversationContext = '';
+    if (conversationHistory.length > 0) {
+      conversationContext = '\n\nConversation History (for context on follow-up questions):\n';
+      conversationHistory.forEach((msg, idx) => {
+        const role = msg.role === 'user' ? 'User' : 'Assistant';
+        conversationContext += `${role}: ${msg.content}\n`;
+      });
+      conversationContext += '\n';
+    }
+
     const prompt = `
-You are a helpful assistant for a personal memory system analyzing ${memoryCount} candidate memories.
+You are a helpful assistant for a personal memory system analyzing ${memoryCount} ${isFollowUp ? 'pinned' : 'candidate'} memories.
+${isFollowUp ? 'This is a follow-up question. These are the SAME memories from the initial question - use the conversation history to understand context and references like "it", "that", "the two papers", "the image", etc.' : ''}
 
 Your task:
 1. Carefully analyze each memory and determine if it's truly relevant to the user's query
-2. Only select memories that directly relate to what the user is asking about
+2. ${isFollowUp ? 'For follow-up questions, ALL memories shown are from the initial search. Reference them based on conversation history and the current question.' : 'Only select memories that directly relate to what the user is asking about'}
 3. Provide a concise, helpful answer based on the most relevant memories
 4. Return your response in this EXACT JSON format:
 {
@@ -127,21 +147,23 @@ Your task:
 }
 
 Guidelines for selecting relevant memories:
-- Prioritize memories with relevance scores above 60%
+${isFollowUp ? '- These are the SAME memories from the initial search - they are already relevant to the overall topic' : '- Prioritize memories with relevance scores above 60%'}
 - Include memories that directly answer the query or provide related context
 - Pay special attention to "Visual Content (AI Description)" fields - these describe image content and are crucial for visual queries
-- Exclude tangentially related memories unless they add significant value
+- ${isFollowUp ? 'For follow-ups, select memories that answer the SPECIFIC follow-up question from the already-provided set' : 'Focus on the current query'}
+- ${isFollowUp ? 'If the user says "the two papers" or similar, use conversation history to identify which papers they mean' : 'Exclude tangentially related memories unless they add significant value'}
 - Limit to 3-5 most relevant memories maximum
-- If no memories are truly relevant, return empty array and explain what you did find
+- ${isFollowUp ? 'For follow-up questions asking to "explain" or "detail" something, include ALL relevant memories that contain that information' : 'If no memories are truly relevant, return empty array and explain what you did find'}
 
 Guidelines for the answer:
-- Keep response to 3-5 sentences maximum
+- ${isFollowUp ? 'For follow-up questions asking for details, provide comprehensive information from the relevant memories' : 'Keep response to 3-5 sentences maximum'}
 - Be specific and reference the actual content from relevant memories
 - When referencing image memories, use details from the "Visual Content (AI Description)" field
+- ${isFollowUp ? 'For follow-up questions, build on previous answers and maintain conversation continuity' : ''}
 - Use bullet points if listing multiple related items
 - Natural, conversational tone
-
-Candidate Memories:
+${conversationContext}
+${isFollowUp ? 'Pinned Memories (from initial search):' : 'Candidate Memories:'}
 ${context}
 
 User Query: ${query}

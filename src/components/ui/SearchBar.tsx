@@ -4,25 +4,46 @@
 import { Button } from "@/components/ui/button";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ConversationMessage } from "@/app/actions";
 
-export function SearchBar() {
+interface SearchBarProps {
+  conversationHistory?: ConversationMessage[];
+  pinnedMemoryIds?: string[];
+}
+
+export function SearchBar({ conversationHistory = [], pinnedMemoryIds = [] }: SearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") || "");
+  const [query, setQuery] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(() => {
       if (query.trim()) {
-        router.push(`/search?q=${encodeURIComponent(query)}`);
+        // Encode conversation history in URL for context
+        const historyParam = conversationHistory.length > 0 
+          ? `&history=${encodeURIComponent(JSON.stringify(conversationHistory))}`
+          : '';
+        // Encode pinned memory IDs so follow-up questions use same memories
+        const memoryIdsParam = pinnedMemoryIds.length > 0
+          ? `&memoryIds=${encodeURIComponent(JSON.stringify(pinnedMemoryIds))}`
+          : '';
+        router.push(`/search?q=${encodeURIComponent(query)}${historyParam}${memoryIdsParam}`);
+        setQuery(''); // Clear input after submission
       } else {
         router.push("/");
       }
     });
   };
 
+  const handleNewConversation = () => {
+    setQuery('');
+    router.push('/');
+  };
+
   const isLoading = isPending;
+  const isInConversation = conversationHistory.length > 0;
 
   return (
     <div className="fixed bottom-[30px] left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4">
@@ -36,11 +57,23 @@ export function SearchBar() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search Memories"
+          placeholder={isInConversation ? "Ask a follow-up question..." : "Search Memories"}
           className="flex-1 bg-transparent text-[15px] text-gray-800 placeholder:text-black placeholder:opacity-60 outline-none font-semibold"
         />
 
-        {/* Upload Button */}
+        {/* New Conversation Button (when in conversation) */}
+        {isInConversation && (
+          <Button
+            type="button"
+            onClick={handleNewConversation}
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 hover:opacity-70 transition-opacity cursor-pointer mr-2 p-0 border-0 bg-gray-200"
+            title="New conversation"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          </Button>
+        )}
+
+        {/* Search Button */}
         <Button
           type="submit"
           disabled={isLoading}
